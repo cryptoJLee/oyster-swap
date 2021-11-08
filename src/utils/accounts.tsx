@@ -312,6 +312,7 @@ function wrapNativeAccount(
       isNative: true,
       rentExemptReserve: null,
       closeAuthority: null,
+      address: pubkey,
     },
   };
 }
@@ -423,10 +424,14 @@ export function AccountsProvider({ children = null as any }) {
 
       precacheUserTokenAccounts(connection, publicKey).then(async () => {
         const accounts = selectUserAccounts();
-        const mints = [...new Set(accounts.map(a => a.info.mint.toBase58())
-          .filter(a => cache.getMint(a) === undefined))]
-          .sort();
-        const response = await getMultipleAccounts(connection, mints, 'single');
+        const mints = [
+          ...new Set(
+            accounts
+              .map((a) => a.info.mint.toBase58())
+              .filter((a) => cache.getMint(a) === undefined)
+          ),
+        ].sort();
+        const response = await getMultipleAccounts(connection, mints, "single");
 
         response.keys.forEach((key, index) => {
           if (response.array[index]) {
@@ -450,7 +455,10 @@ export function AccountsProvider({ children = null as any }) {
       const tokenSubID = connection.onProgramAccountChange(
         programIds().token,
         (info) => {
-          const id = typeof info.accountId === 'string' ? info.accountId as unknown as string : info.accountId.toBase58();
+          const id =
+            typeof info.accountId === "string"
+              ? ((info.accountId as unknown) as string)
+              : info.accountId.toBase58();
           // TODO: do we need a better way to identify layout (maybe a enum identifing type?)
           if (info.accountInfo.data.length === AccountLayout.span) {
             const data = deserializeAccount(info.accountInfo.data);
@@ -528,19 +536,18 @@ export const getMultipleAccounts = async (
   const array = result
     .map(
       (a) =>
-        a.array
-          .map((acc) => {
-            if(!acc) {
-              return undefined;
-            }
+        a.array.map((acc) => {
+          if (!acc) {
+            return undefined;
+          }
 
-            const { data, ...rest } = acc;
-            const obj = {
-              ...rest,
-              data: Buffer.from(data[0], "base64"),
-            } as AccountInfo<Buffer>;
-            return obj;
-          }) as AccountInfo<Buffer>[]
+          const { data, ...rest } = acc;
+          const obj = {
+            ...rest,
+            data: Buffer.from(data[0], "base64"),
+          } as AccountInfo<Buffer>;
+          return obj;
+        }) as AccountInfo<Buffer>[]
     )
     .flat();
   return { keys, array };
